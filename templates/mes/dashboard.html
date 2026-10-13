@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load mes_extras %}
+{% block title %}Dashboard{% endblock %}{% block header %}Dashboard operativo{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card-ebr bd p-3"><small class="text-secondary">Lotes en proceso</small><div class="fs-3 fw-semibold">{{ n_lotes_activos }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card-ebr bd p-3"><small class="text-secondary">Botellas con trazabilidad</small><div class="fs-3 fw-semibold">{{ n_botellas }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card-ebr bd p-3"><small class="text-secondary">Alertas pendientes</small><div class="fs-3 fw-semibold">{{ alertas_pendientes|default:0 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="card-ebr bd p-3"><small class="text-secondary">PCC sin resolver</small><div class="fs-3 fw-semibold {% if n_alertas_pcc %}text-danger{% endif %}">{{ n_alertas_pcc }}</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card-ebr"><div class="hd">Lotes activos y recientes</div>
+    <table class="table table-sm mb-0"><thead><tr><th>Lote</th><th>Producto</th><th>Avance de tiempo</th><th>Estado</th></tr></thead><tbody>
+    {% for l in lotes %}<tr><td><a href="{% url 'mes:lote_control' l.codigo %}">{{ l.codigo }}</a></td><td>{{ l.receta.producto_final }}</td>
+      <td style="min-width:140px"><div class="progress" style="height:8px"><div class="progress-bar bg-success" style="width:{{ l.avance_tiempo_pct }}%"></div></div>
+        <small class="text-secondary">{{ l.duracion_real_min|hm }} de {{ l.duracion_estimada_min|hm }}</small></td>
+      <td>{{ l.get_estado_display }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-center text-secondary py-4">No hay lotes. Cargue datos con <code>seed_demo</code> o cree uno en Administración.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  <div class="col-lg-5"><div class="card-ebr"><div class="hd">Desviaciones por gestionar <a href="{% url 'mes:alertas' %}" class="small">ver todas</a></div>
+    <div class="bd">{% for a in alertas %}<div class="mb-2 pb-2 border-bottom"><span class="tag {% if a.tipo_control == 'PCC' %}pcc{% else %}pc{% endif %}">{{ a.tipo_control }}</span>
+      <b class="ms-1">{{ a.lote.codigo }}</b> · {{ a.variable.codigo }} {{ a.lectura.valor_medido }} {{ a.variable.unidad }}</div>
+    {% empty %}<p class="text-secondary mb-0">Sin desviaciones pendientes.</p>{% endfor %}</div></div></div>
+</div>
+{% endblock %}

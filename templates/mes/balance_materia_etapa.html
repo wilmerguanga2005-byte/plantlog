@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Balance {{ lote.codigo }}{% endblock %}{% block header %}Balance de materia · {{ lote.codigo }}{% endblock %}
+{% block content %}
+<div class="ficha mb-3">
+  <div><small>Materia inicial</small><b>{{ entrada|floatformat:2 }} kg</b></div>
+  <div><small>Materia final que continúa</small><b>{{ salida|floatformat:2 }} kg</b></div>
+  <div><small>Mermas declaradas (total)</small><b>{{ totales.merma|floatformat:2 }} kg</b></div>
+  <div><small>Rendimiento global real</small><b>{{ global_pct }} %</b></div>
+  <div><small>Rendimiento de receta (encadenado)</small><b>{{ teorico_pct }} %</b></div>
+</div>
+<div class="row g-3">
+  <div class="col-xl-7"><div class="card-ebr"><div class="hd">Rendimiento por etapa</div><div class="bd"><div class="chart-box"><canvas id="chart-balance"></canvas></div></div></div></div>
+  <div class="col-xl-5"><div class="card-ebr"><div class="hd">Registrar / corregir balance <small class="fw-normal text-secondary" id="form-etapa">Seleccione una fila</small></div>
+    <form method="post" id="form-balance" class="bd row g-2">{% csrf_token %}
+      <input type="hidden" name="seguimiento" value="">
+      <div class="col-6"><label class="form-label small">Entra (kg)</label><input name="masa_entra_kg" type="number" step="0.001" min="0" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Se incorpora (kg)</label><input name="masa_incorporada_kg" type="number" step="0.001" min="0" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Continúa (kg)</label><input name="masa_continua_kg" type="number" step="0.001" min="0" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Merma declarada (kg)</label><input name="merma_declarada_kg" type="number" step="0.001" min="0" class="form-control form-control-sm"></div>
+      <div class="col-12"><label class="form-label small">Motivo de la merma</label><input name="motivo_merma" maxlength="200" class="form-control form-control-sm"></div>
+      <div class="col-12 small text-secondary">Merma calculada: <b id="calc-merma">0.000</b> kg · Rendimiento: <b id="calc-rend">0.00</b> %</div>
+      <div class="col-12"><button class="btn btn-success btn-sm">Guardar balance</button></div></form></div></div>
+</div>
+<div class="card-ebr mt-3"><div class="hd">Detalle por etapa <small class="fw-normal text-secondary">entra + se incorpora = continúa + merma · clic en una fila para editar</small></div>
+<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+<thead><tr><th>Etapa</th><th class="text-end">Entra</th><th class="text-end">Se incorpora</th><th class="text-end">Continúa</th><th class="text-end">Merma declarada</th><th class="text-end">Sin declarar</th><th class="text-end">Real %</th><th class="text-end">Receta %</th><th>Δ</th></tr></thead><tbody>
+{% for f in filas %}{% with b=f.bal e=f.seg.etapa %}
+<tr data-seg="{{ f.seg.pk }}" data-nombre="E{{ e.numero }} · {{ e.nombre }}" style="cursor:pointer"
+  {% if b %}data-masaentrakg="{{ b.masa_entra_kg|stringformat:'s' }}" data-masaincorporadakg="{{ b.masa_incorporada_kg|stringformat:'s' }}" data-masacontinuakg="{{ b.masa_continua_kg|stringformat:'s' }}" data-mermadeclaradakg="{{ b.merma_declarada_kg|stringformat:'s' }}" data-motivomerma="{{ b.motivo_merma }}"{% endif %}>
+  <td>E{{ e.numero }} {{ e.nombre }} {% if e.es_pcc %}<span class="tag pcc">{{ e.codigo_control }}</span>{% elif e.es_pc %}<span class="tag pc">{{ e.codigo_control }}</span>{% endif %}</td>
+  {% if b %}<td class="text-end">{{ b.masa_entra_kg|floatformat:2 }}</td><td class="text-end">{{ b.masa_incorporada_kg|floatformat:2 }}</td><td class="text-end">{{ b.masa_continua_kg|floatformat:2 }}</td>
+  <td class="text-end">{{ b.merma_declarada_kg|floatformat:2 }}</td><td class="text-end {% if not b.balance_cierra %}text-danger fw-semibold{% endif %}">{{ b.merma_no_declarada_kg|floatformat:2 }}</td>
+  <td class="text-end">{{ b.rendimiento_real_pct }}</td><td class="text-end">{{ e.rendimiento_esperado_pct }}</td>
+  <td>{% if b.desviacion_vs_receta_pct < -1 %}<i class="fa-solid fa-arrow-trend-down text-danger"></i>{% else %}<i class="fa-solid fa-check text-success"></i>{% endif %}</td>
+  {% else %}<td colspan="8" class="text-secondary">Sin balance registrado</td>{% endif %}</tr>
+{% endwith %}{% endfor %}</tbody></table></div></div>
+{{ chart|json_script:"balance-data" }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'mes/js/balance.js' %}"></script>{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load mes_extras %}
+{% block title %}{{ titulo }}{% endblock %}{% block header %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="card-ebr"><div class="hd">Seleccione un lote</div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Lote</th><th>Orden</th><th>Receta</th><th>Inicio</th><th>Duración</th><th>Estado</th><th></th></tr></thead><tbody>
+{% for l in lotes %}<tr><td class="fw-semibold">{{ l.codigo }}</td><td>{{ l.orden.numero }}</td><td>{{ l.receta.codigo }}</td>
+<td>{{ l.fecha_inicio|date:"d/m/Y H:i" }}</td><td>{{ l.duracion_real_min|hm }}</td><td>{{ l.get_estado_display }}</td>
+<td class="text-end">
+  {% if destino == 'balance' %}<a class="btn btn-sm btn-success" href="{% url 'mes:balance' l.codigo %}">Abrir balance</a>
+  {% elif destino == 'envasado' %}<a class="btn btn-sm btn-success" href="{% url 'mes:envasado' l.codigo %}">Abrir envasado</a>
+  {% elif destino == 'iot' %}<a class="btn btn-sm btn-success" href="{% url 'mes:lote_control' l.codigo %}#iot">Ver en vivo</a>
+  {% else %}<a class="btn btn-sm btn-success" href="{% url 'mes:lote_control' l.codigo %}">Abrir EBR</a>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="7" class="text-center py-4 text-secondary">Aún no hay lotes registrados.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

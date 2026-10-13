@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Agente IA{% endblock %}{% block header %}Agente IA / puntos críticos{% endblock %}
+{% block content %}
+<div class="btn-group btn-group-sm mb-3">
+  <a class="btn btn-outline-secondary {% if estado == 'PENDIENTE' %}active{% endif %}" href="?estado=PENDIENTE">Pendientes</a>
+  <a class="btn btn-outline-secondary {% if estado == 'APROBADO' %}active{% endif %}" href="?estado=APROBADO">Aprobadas</a>
+  <a class="btn btn-outline-secondary {% if estado == 'RECHAZADO' %}active{% endif %}" href="?estado=RECHAZADO">Descartadas</a>
+  <a class="btn btn-outline-secondary {% if estado == 'TODAS' %}active{% endif %}" href="?estado=TODAS">Todas</a></div>
+<div class="row g-3">
+ <div class="col-lg-8">
+  {% for a in alertas %}<div id="alerta-{{ a.pk }}" class="card-ebr agent mb-3"><div class="bd">
+    <div class="d-flex justify-content-between"><div><span class="tag {% if a.tipo_control == 'PCC' %}pcc{% else %}pc{% endif %}">{{ a.tipo_control }}</span>
+      <b class="ms-1"><a href="{% url 'mes:lote_control' a.lote.codigo %}">{{ a.lote.codigo }}</a> · {{ a.variable.codigo }} = {{ a.lectura.valor_medido }} {{ a.variable.unidad }}</b></div>
+      <small class="text-secondary">{{ a.creada|date:"d/m H:i" }}</small></div>
+    <p class="small mt-2 mb-1"><b>Causa probable:</b> {{ a.explicacion_causa }}</p><p class="small mb-2"><b>Acción propuesta:</b> {{ a.accion_propuesta }}</p>
+    {% if a.estado == "PENDIENTE" %}<div class="agent-actions d-flex gap-2"><button class="btn btn-sm btn-success" data-alerta-id="{{ a.pk }}" data-alerta-accion="aprobar">Aprobar medida</button>
+      <button class="btn btn-sm btn-outline-secondary" data-alerta-id="{{ a.pk }}" data-alerta-accion="descartar">Descartar</button></div>
+    {% else %}<small class="text-secondary">{{ a.get_estado_display }} por {{ a.auditado_por|default:"—" }} el {{ a.fecha_aprobacion|date:"d/m/Y H:i" }}</small>{% endif %}
+  </div></div>{% empty %}<div class="card-ebr bd text-secondary">No hay alertas en este estado.</div>{% endfor %}
+ </div>
+ <div class="col-lg-4"><div class="card-ebr"><div class="hd">Puntos de control definidos</div><ul class="list-group list-group-flush small">
+  {% for e in puntos %}<li class="list-group-item"><span class="tag {% if e.es_pcc %}pcc{% else %}pc{% endif %}">{{ e.codigo_control }}</span> E{{ e.numero }} {{ e.nombre }}<br><span class="text-secondary">{{ e.especificacion_critica }}</span></li>{% endfor %}</ul></div></div>
+</div>
+{% endblock %}

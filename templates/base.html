@@ -1,0 +1,60 @@
+{% load static %}<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>{% block title %}MES UPEC{% endblock %} · UPEC</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link href="{% static 'mes/css/mes.css' %}" rel="stylesheet">
+{% block head %}{% endblock %}
+</head><body>
+{% with rn=request.resolver_match.url_name dest=request.GET.destino %}
+<div class="app">
+  <nav class="side" aria-label="Navegación principal">
+    <div class="brand"><b>PLANTLOG</b><small>Almidones y bebidas · EBR</small></div>
+    <a href="{% url 'mes:dashboard' %}" class="{% if rn == 'dashboard' %}on{% endif %}"><i class="fa-solid fa-gauge-high"></i>Dashboard operativo</a>
+    <a href="{% url 'mes:lotes' %}?destino=control" class="{% if rn == 'lote_control' or dest == 'control' %}on{% endif %}"><i class="fa-solid fa-clipboard-list"></i>Lotes (EBR)</a>
+    <a href="{% url 'mes:lotes' %}?destino=balance" class="{% if rn == 'balance' or dest == 'balance' %}on{% endif %}"><i class="fa-solid fa-scale-balanced"></i>Cronograma y balance de materia</a>
+    <a href="{% url 'mes:lotes' %}?destino=iot" class="{% if dest == 'iot' %}on{% endif %}"><i class="fa-solid fa-tower-broadcast"></i>IoT en vivo</a>
+    <a href="{% url 'mes:lotes' %}?destino=envasado" class="{% if rn == 'envasado' or dest == 'envasado' %}on{% endif %}"><i class="fa-solid fa-bottle-water"></i>Envasado y botellas</a>
+    <a href="{% url 'mes:alertas' %}" class="{% if rn == 'alertas' %}on{% endif %}"><i class="fa-solid fa-robot"></i>Agente IA / puntos críticos</a>
+    <a href="{% url 'mes:cedi' %}" class="{% if rn == 'cedi' %}on{% endif %}"><i class="fa-solid fa-truck-ramp-box"></i>Despacho CEDI</a>
+    {% if user.is_staff %}<a href="{% url 'admin:index' %}"><i class="fa-solid fa-gear"></i>Administración</a>{% endif %}
+  </nav>
+  <div>
+    <header class="topbar">
+      <h1 class="h6 m-0">{% block header %}Planta piloto UPEC{% endblock %}</h1>
+      <div class="d-flex align-items-center gap-3 small">
+        <!-- Tarjeta de bienvenida del usuario -->
+<div class="d-flex align-items-center gap-2 px-3 py-1 bg-light rounded-pill border">
+    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 12px;">
+        <i class="fas fa-user"></i>
+    </div>
+    <div class="d-flex flex-column" style="line-height: 1.1;">
+        <span style="font-size: 10px; color: #6c757d; text-transform: uppercase;">Bienvenido/a</span>
+        <span style="font-size: 12px; font-weight: 600; color: #212529;">{% if user.is_authenticated %}{{ user.first_name|default:user.username|title }}{% else %}Invitado{% endif %}</span>
+    </div>
+</div>
+        <span title="Broker MQTT {{ mqtt_host }}"><i class="fa-solid fa-circle {% if mqtt_activo %}text-success{% else %}text-danger{% endif %}"></i>
+          MQTT {% if mqtt_activo %}conectado{% else %}sin conexión{% endif %}</span>
+        <a href="{% url 'mes:alertas' %}" class="text-decoration-none position-relative text-dark" aria-label="Alertas pendientes">
+          <i class="fa-solid fa-bell fa-lg"></i>
+          <span id="badge-alertas" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle {% if not alertas_pendientes %}d-none{% endif %}">{{ alertas_pendientes|default:0 }}</span>
+        </a>
+        <form method="post" action="{% url 'logout' %}" class="m-0">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-right-from-bracket"></i> {{ user.username }}</button></form>
+      </div>
+    </header>
+    <main class="main">
+      {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %} py-2">{{ m }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'mes/js/mes.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body></html>

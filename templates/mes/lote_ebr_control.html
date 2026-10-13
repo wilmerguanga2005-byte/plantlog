@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% load static mes_extras %}
+{% block title %}EBR {{ lote.codigo }}{% endblock %}{% block header %}Ficha digital de proceso · {{ lote.codigo }}{% endblock %}
+{% block content %}
+<div class="ficha mb-3">
+  <div><small>Receta / corrida base</small><b>{{ lote.receta.codigo }}</b><br><small>{{ lote.receta.tamano_corrida_base|floatformat:0 }} {{ lote.receta.unidad_medida }}</small></div>
+  <div><small>Lote</small><b>{{ lote.codigo }}</b><br><small>{{ lote.orden.numero }} · {{ lote.get_estado_display }}</small></div>
+  <div><small>Producto</small><b>{{ lote.receta.producto_final }}</b></div>
+  <div><small>Duración acumulada vs. estimada ({{ estimada_h }} h)</small><b>{{ lote.duracion_real_min|hm }}</b>
+    <div class="progress mt-1" style="height:6px"><div class="progress-bar bg-success" style="width:{{ lote.avance_tiempo_pct }}%"></div></div></div>
+  <div><small>Puntos de control</small>
+    <span class="tag pc">PC × {{ pcs|length }}</span> <span class="tag pcc">PCC × {{ pccs|length }}</span></div>
+</div>
+
+<div class="card-ebr mb-3"><div class="hd">Cronograma de la corrida
+  <span class="small text-secondary fw-normal"><i class="fa-solid fa-square text-warning"></i> PC &nbsp;<i class="fa-solid fa-square text-danger"></i> PCC &nbsp; ASME Y15.3: Operación · Inspección · Demora</span></div>
+<div class="table-responsive"><table class="table table-sm mb-0">
+<thead><tr><th>N°</th><th>Etapa</th><th>Tipo</th><th>Equipo</th><th>Trabajo / espera (min)</th><th style="width:130px">Distribución</th><th>Pers.</th><th>Control</th><th>Estado</th></tr></thead><tbody>
+{% for s in segs %}{% with e=s.etapa %}
+<tr class="{% if e.es_pcc %}row-pcc{% elif e.es_pc %}row-pc{% endif %} {% if activa and activa.pk == s.pk %}row-act{% endif %}">
+  <td>{{ e.numero }}</td><td>{{ e.nombre }}{% if e.especificacion_critica %}<br><small class="text-secondary">{{ e.especificacion_critica }}</small>{% endif %}</td>
+  <td>{{ e.get_tipo_display }}</td><td>{{ e.equipo.codigo|default:"—" }}</td>
+  <td>{{ e.tiempo_trabajo_min }} / {{ e.tiempo_espera_min }}{% if s.estado == "COMPLETADA" %}<br><small class="text-secondary">real {{ s.tiempo_trabajo_real_min }} / {{ s.tiempo_espera_real_min }}</small>{% endif %}</td>
+  <td><div class="bar-wait" title="Trabajo vs. espera">{% if e.tiempo_total_min %}<i class="w" style="width:{% widthratio e.tiempo_trabajo_min e.tiempo_total_min 100 %}%"></i><i class="e" style="width:{% widthratio e.tiempo_espera_min e.tiempo_total_min 100 %}%"></i>{% endif %}</div></td>
+  <td>{{ e.personas_requeridas }}</td>
+  <td>{% if e.es_pcc %}<span class="tag pcc">{{ e.codigo_control|default:"PCC" }}</span>{% elif e.es_pc %}<span class="tag pc">{{ e.codigo_control|default:"PC" }}</span>{% else %}—{% endif %}</td>
+  <td>{% if s.estado == "COMPLETADA" %}<span class="tag ok">Completada</span>{% elif s.estado == "EN_CURSO" %}<span class="tag run">En curso</span>{% elif s.estado == "DESVIADA" %}<span class="tag pcc">Desviada</span>{% else %}<span class="tag off">Pendiente</span>{% endif %}</td>
+</tr>{% endwith %}{% endfor %}
+</tbody></table></div></div>
+
+<div class="row g-3">
+  <div class="col-xl-8" id="iot"><div class="card-ebr"><div class="hd">Monitoreo IoT · control estadístico
+    <div class="d-flex align-items-center gap-3">
+      <div class="btn-group btn-group-sm">{% for v in variables %}<button type="button" class="btn btn-outline-secondary {% if forloop.first %}active{% endif %}" data-var="{{ v.codigo }}">{{ v.codigo }}</button>{% endfor %}</div>
+      <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" id="toggle-vivo" checked><label class="form-check-label small" for="toggle-vivo">En vivo</label></div></div></div>
+    <div class="bd"><div class="chart-box"><canvas id="chart-control" data-url="{% url 'mes:api_lecturas' lote.codigo %}" data-etapa="" data-variable="{{ variables.0.codigo|default:'TEMP' }}"></canvas></div>
+      <div class="row text-center mt-3 small g-2">
+        <div class="col"><div class="text-secondary">Última</div><b id="st-ultimo">—</b></div><div class="col"><div class="text-secondary">Media</div><b id="st-media">—</b></div>
+        <div class="col"><div class="text-secondary">σ</div><b id="st-sigma">—</b></div><div class="col"><div class="text-secondary">n</div><b id="st-n">—</b></div>
+        <div class="col"><div class="text-secondary">Límites</div><b id="st-limites">—</b></div><div class="col"><span id="st-estado" class="tag off">—</span></div></div></div></div></div>
+  <div class="col-xl-4 d-flex flex-column gap-3">
+    <div class="card-ebr"><div class="hd">Predicción de rendimiento (ML)</div>
+      <div class="bd" id="pred-box" data-url="{% url 'mes:api_prediccion' lote.codigo %}">
+        <div class="progress mb-2" style="height:26px"><div id="pred-bar" class="progress-bar" style="width:0%">…</div></div>
+        <dl class="row small mb-1"><dt class="col-6 fw-normal text-secondary">Rendimiento teórico</dt><dd class="col-6 mb-0" id="pred-teorico">—</dd>
+          <dt class="col-6 fw-normal text-secondary">Error estimado (MAE)</dt><dd class="col-6 mb-0" id="pred-mae">—</dd>
+          <dt class="col-6 fw-normal text-secondary">Volumen proyectado</dt><dd class="col-6 mb-0" id="pred-vol">—</dd></dl>
+        <small class="text-secondary" id="pred-msg">Calculando…</small></div></div>
+    <div class="card-ebr agent"><div class="hd"><span><i class="fa-solid fa-robot"></i> Agente de IA</span><span class="small text-secondary fw-normal">requiere aprobación humana</span></div>
+      <div class="bd">{% for a in alertas_pendientes_lote %}
+        <div id="alerta-{{ a.pk }}" class="mb-3">
+          <span class="tag {% if a.tipo_control == 'PCC' %}pcc{% else %}pc{% endif %}">{{ a.tipo_control }}</span>
+          <b class="ms-1">{{ a.variable.codigo }} = {{ a.lectura.valor_medido }} {{ a.variable.unidad }}</b>
+          <p class="small mt-2 mb-1"><b>Causa probable:</b> {{ a.explicacion_causa }}</p>
+          <p class="small mb-2"><b>Acción propuesta:</b> {{ a.accion_propuesta }}</p>
+          <div class="agent-actions d-flex gap-2">
+            <button class="btn btn-sm btn-success" data-alerta-id="{{ a.pk }}" data-alerta-accion="aprobar">Aprobar medida</button>
+            <button class="btn btn-sm btn-outline-secondary" data-alerta-id="{{ a.pk }}" data-alerta-accion="descartar">Descartar</button></div></div>
+      {% empty %}<p class="mb-0 text-secondary small">Sin desviaciones: todas las variables dentro de límites.</p>{% endfor %}</div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'mes/js/control_chart.js' %}"></script><script src="{% static 'mes/js/lote_control.js' %}"></script>{% endblock %}

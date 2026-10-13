@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Despacho CEDI{% endblock %}{% block header %}Despacho CEDI{% endblock %}
+{% block content %}
+<div class="card-ebr mb-3"><div class="hd">Nuevo despacho al Centro de Distribución</div>
+  <div class="bd d-flex gap-2 align-items-end flex-wrap"><div><label class="form-label small">Lote envasado</label>
+    <select id="sel-lote" class="form-select form-select-sm">{% for l in lotes_listos %}<option value="{{ l.codigo }}">{{ l.codigo }} · {{ l.botellas.count }} botellas</option>{% empty %}<option value="">Sin lotes envasados</option>{% endfor %}</select></div>
+    <button id="btn-despacho" class="btn btn-success btn-sm" {% if not lotes_listos %}disabled{% endif %}>Generar despacho y contrato</button></div></div>
+<div class="card-ebr"><div class="hd">Despachos</div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Código</th><th>Lote</th><th>Unidades</th><th>Odoo</th><th>Creado</th><th>Contrato</th></tr></thead><tbody>
+{% for d in despachos %}<tr><td class="fw-semibold">{{ d.codigo }}</td><td>{{ d.lote.codigo }}</td><td>{{ d.cantidad_unidades }}</td>
+<td><span class="tag {% if d.estado_sincronizacion_odoo == 'ENVIADO' %}ok{% else %}off{% endif %}">{{ d.get_estado_sincronizacion_odoo_display }}</span></td>
+<td>{{ d.creado|date:"d/m/Y H:i" }}</td><td><a target="_blank" href="{% url 'mes:api_despacho' d.pk %}?format=json">JSON</a></td></tr>
+{% empty %}<tr><td colspan="6" class="text-center text-secondary py-4">Sin despachos registrados.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}
+{% block scripts %}<script>
+document.getElementById("btn-despacho")?.addEventListener("click", async () => {
+  const lote = document.getElementById("sel-lote").value; if (!lote) return;
+  try { await MES.post("{% url 'mes:api_despacho_crear' %}", {lote_codigo: lote}); MES.toast("Despacho generado."); setTimeout(() => location.reload(), 700); }
+  catch (e) { MES.toast(e.message, "danger"); }
+});
+</script>{% endblock %}

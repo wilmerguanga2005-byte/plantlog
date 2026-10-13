@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Envasado {{ lote.codigo }}{% endblock %}{% block header %}Envasado y marbetes · {{ lote.codigo }}{% endblock %}
+{% block content %}
+{% if not envasado %}
+<div class="card-ebr" style="max-width:560px"><div class="hd">Cierre de lote: etapa de envasado</div>
+  <form id="form-cierre" class="bd row g-2" data-url="{% url 'mes:api_cerrar_envasado' lote.codigo %}">
+    <div class="col-12 small text-secondary">Al cerrar se generan las botellas con serial único, hash de autenticidad y QR hacia el portal público.</div>
+    {% if pendientes %}<div class="col-12"><div class="alert alert-warning py-2 small mb-0">Hay {{ pendientes }} alerta(s) pendientes de gobernanza en este lote.</div></div>{% endif %}
+    <div class="col-4"><label class="form-label small">Volumen (L)</label><input name="volumen" type="number" step="0.01" min="0" class="form-control" required></div>
+    <div class="col-4"><label class="form-label small">Unidades</label><input name="unidades" type="number" min="1" max="20000" class="form-control" required></div>
+    <div class="col-4"><label class="form-label small">Merma (L)</label><input name="merma" type="number" step="0.01" min="0" class="form-control"></div>
+    <div class="col-12"><button class="btn btn-success">Cerrar envasado y generar marbetes</button></div></form></div>
+{% else %}
+<div class="ficha mb-3 no-print">
+  <div><small>Botellas generadas</small><b>{{ total }}</b></div><div><small>Volumen obtenido</small><b>{{ envasado.volumen_total_obtenido_l }} L</b></div>
+  <div><small>Merma de envasado</small><b>{{ envasado.merma_envasado_l }} L</b></div><div><small>Fecha</small><b>{{ envasado.fecha|date:"d/m/Y H:i" }}</b></div>
+  <div class="d-flex gap-2 align-items-center"><button class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir</button>
+    <a class="btn btn-success btn-sm" href="{% url 'mes:marbetes_zip' lote.codigo %}"><i class="fa-solid fa-file-zipper"></i> Descargar ZIP</a></div></div>
+<div class="qr-grid">{% for b in botellas %}<figure><img src="{{ b.qr_code_image.url }}" alt="QR botella {{ b.numero_botella }}" loading="lazy">
+  <figcaption><b>{{ lote.codigo }}</b> · N° {{ b.numero_botella }}/{{ total }}<br>{{ b.codigo_serial_uuid_gs1|slice:":8" }}…</figcaption></figure>{% endfor %}</div>
+{% if total > botellas|length %}<p class="small text-secondary mt-2 no-print">Vista previa de las primeras {{ botellas|length }}; el ZIP incluye las {{ total }}.</p>{% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'mes/js/envasado.js' %}"></script>{% endblock %}
